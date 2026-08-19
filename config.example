@@ -1,0 +1,44 @@
+# ChatHUD v0.5.1
+# auto = yt-dlp, jeśli dostępny; inaczej oficjalne YouTube API
+provider=auto
+youtube_api_key=
+
+# Liczba ostatnich wiadomości trzymanych na ekranie.
+lines=6
+
+# Szerokość panelu. Długie wiadomości są TERAZ ZAWIJANE, nie ucinane.
+width=700
+
+# Rozmiary tekstu.
+font_size=18
+header_font_size=16
+
+# 1 = pokaż nazwę kanału u góry, 0 = bez nagłówka.
+show_header=1
+
+# Tło panelu: 0.0 = całkowicie bez tła, 1.0 = pełne krycie.
+# Możesz użyć opacity= albo background_opacity=.
+background_opacity=0.62
+
+# Odstęp od krawędzi ekranu.
+margin=24
+
+# 9 pozycji:
+# top-left, top-center, top-right
+# center-left, center, center-right
+# bottom-left, bottom-center, bottom-right
+position=top-right
+
+# Wyrównanie samego tekstu: left, center, right
+text_align=left
+
+# oldest-first = najnowsze na dole
+# newest-first = najnowsze na górze
+message_order=oldest-first
+
+# Obrazkowe custom emoji YouTube. Unicode emoji działają przez font Pango.
+emotes=1
+emote_size=24
+
+# Jak często przerysowywać overlay w ms.
+refresh_ms=100

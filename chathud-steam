@@ -1,0 +1,124 @@
+#!/usr/bin/bash
+# ChatHUD Steam launcher v0.5.1
+#
+# Ten skrypt jest celowo oddzielony od natywnego chathud.
+# Steam/Proton ustawia własne zmienne środowiskowe bibliotek. Natywny overlay
+# uruchamiamy w oczyszczonym środowisku, ale właściwą komendę gry wykonujemy
+# DOKŁADNIE z oryginalnym środowiskiem Steam.
+
+set -u
+
+url=""
+api_key=""
+config_path=""
+demo=0
+
+usage() {
+    cat >&2 <<'TXT'
+ChatHUD Steam launcher 0.5.1
+
+Użycie:
+  chathud-steam --url URL -- %command%
+  chathud-steam --demo -- %command%
+TXT
+}
+
+while (($# > 0)); do
+    case "$1" in
+        --url)
+            if (($# < 2)); then usage; exit 2; fi
+            url="$2"
+            shift 2
+            ;;
+        --api-key)
+            if (($# < 2)); then usage; exit 2; fi
+            api_key="$2"
+            shift 2
+            ;;
+        --config)
+            if (($# < 2)); then usage; exit 2; fi
+            config_path="$2"
+            shift 2
+            ;;
+        --demo)
+            demo=1
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "ChatHUD: nieznana opcja launchera: $1" >&2
+            usage
+            exit 2
+            ;;
+    esac
+done
+
+if (($# == 0)); then
+    echo "ChatHUD: brak komendy gry po --" >&2
+    exit 2
+fi
+
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/chathud"
+mkdir -p "$cache_dir"
+log_file="$cache_dir/steam-wrapper.log"
+
+# Preferuj binarkę z tego samego katalogu co launcher, potem ~/.local/bin.
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+if [[ -n "${CHATHUD_BIN:-}" ]]; then
+    chathud_bin="$CHATHUD_BIN"
+elif [[ -x "$script_dir/chathud" ]]; then
+    chathud_bin="$script_dir/chathud"
+else
+    chathud_bin="$HOME/.local/bin/chathud"
+fi
+
+{
+    printf '\n==== ChatHUD Steam wrapper %(%Y-%m-%d %H:%M:%S)T ====\n' -1
+    printf 'wrapper_pid=%d\n' "$$"
+    printf 'binary=%q\n' "$chathud_bin"
+    printf 'DISPLAY=%q WAYLAND_DISPLAY=%q XDG_SESSION_TYPE=%q\n' \
+        "${DISPLAY-}" "${WAYLAND_DISPLAY-}" "${XDG_SESSION_TYPE-}"
+    printf 'steam_runtime_ld_library_path=%s steam_ld_preload=%s\n' \
+        "$([[ -n "${LD_LIBRARY_PATH-}" ]] && echo present || echo absent)" \
+        "$([[ -n "${LD_PRELOAD-}" ]] && echo present || echo absent)"
+    printf 'game_command:'
+    printf ' %q' "$@"
+    printf '\n'
+} >>"$log_file" 2>&1
+
+# Najważniejsza własność launchera: awaria ChatHUD NIE MOŻE zablokować gry.
+# Jeśli binarki nie ma, od razu przechodzimy do komendy Steam.
+if [[ ! -x "$chathud_bin" ]]; then
+    echo "ChatHUD: brak wykonywalnej binarki $chathud_bin; uruchamiam grę bez overlaya." >>"$log_file"
+    exec "$@"
+fi
+
+worker=("$chathud_bin" --worker --watch-pid "$$")
+[[ -n "$config_path" ]] && worker+=(--config "$config_path")
+[[ -n "$url" ]] && worker+=(--url "$url")
+[[ -n "$api_key" ]] && worker+=(--api-key "$api_key")
+((demo)) && worker+=(--demo)
+
+# chathud jest programem zbudowanym przeciwko bibliotekom hosta (Arch).
+# Nie przekazujemy mu ścieżek/preloadów Steam Runtime. To dotyczy WYŁĄCZNIE
+# procesu overlaya. Komenda gry poniżej zachowuje oryginalne środowisko Steam.
+env -u LD_LIBRARY_PATH -u LD_PRELOAD "${worker[@]}" >>"$log_file" 2>&1 &
+worker_pid=$!
+echo "overlay_worker_pid=$worker_pid" >>"$log_file"
+
+# Steam ma dalej widzieć własną komendę, ze wszystkimi jego zmiennymi.
+# PID launchera zostaje PID-em gry/Protona dzięki exec.
+exec "$@"
+
+# exec wraca tylko przy błędzie.
+rc=$?
+echo "ChatHUD: exec gry nie powiódł się, rc=$rc" >>"$log_file"
+kill "$worker_pid" 2>/dev/null || true
+exit "$rc"
