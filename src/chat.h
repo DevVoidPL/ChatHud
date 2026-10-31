@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include "i18n.h"
 
 #define CHATHUD_MAX_MESSAGES 32
 #define CHATHUD_AUTHOR_MAX 128
@@ -31,6 +32,7 @@ typedef struct {
 typedef struct {
     char id[CHATHUD_ID_MAX];
     char author[CHATHUD_AUTHOR_MAX];
+    char login[CHATHUD_AUTHOR_MAX];
     char text[CHATHUD_TEXT_MAX];
     ChatRun runs[CHATHUD_MAX_RUNS];
     size_t run_count;
@@ -43,6 +45,7 @@ typedef struct {
     char title[CHATHUD_TITLE_MAX];
     char status[CHATHUD_STATUS_MAX];
     int has_error;
+    int language_pl;
     volatile sig_atomic_t stop;
 } ChatState;
 
@@ -95,6 +98,7 @@ static inline void chat_state_init(ChatState *state) {
     state->title[0] = '\0';
     state->status[0] = '\0';
     state->has_error = 0;
+    state->language_pl = 0;
     state->stop = 0;
 }
 
@@ -146,7 +150,7 @@ static inline void chat_state_set_title(ChatState *state, const char *title) {
 
 static inline void chat_state_set_status(ChatState *state, const char *status, int is_error) {
     pthread_mutex_lock(&state->mutex);
-    snprintf(state->status, sizeof(state->status), "%s", status ? status : "");
+    snprintf(state->status, sizeof(state->status), "%s", chat_translate(status ? status : "", state->language_pl));
     state->has_error = is_error;
     pthread_mutex_unlock(&state->mutex);
 }

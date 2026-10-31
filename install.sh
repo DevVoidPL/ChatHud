@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
-printf '==> Buduję ChatHUD 0.6.1\n'
+printf '==> Buduję ChatHUD 0.7.0\n'
 make -j"$(nproc)"
 printf '==> Instaluję overlay, launcher Steam i panel graficzny\n'
 make install
@@ -17,7 +17,7 @@ fi
 if ! command -v yt-dlp >/dev/null; then
     printf '\nDo czatu bez klucza API zainstaluj yt-dlp.\nArch: sudo pacman -S yt-dlp\nUbuntu/Debian: sudo apt install yt-dlp\n'
 fi
-printf '\nGotowe — ChatHUD 0.6.1.\n'
+printf '\nGotowe — ChatHUD 0.7.0.\n'
 printf 'Uruchom aplikację ChatHUD z menu lub: %s/.local/bin/chathud-gui\n' "$HOME"
 printf 'Dotychczasowa konfiguracja została zachowana.\n'
 printf 'Test bez internetu: %s/.local/bin/chathud --demo --no-game\n' "$HOME"

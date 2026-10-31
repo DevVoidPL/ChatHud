@@ -7,6 +7,7 @@ typedef struct {
     char stream_url[2048];
     char youtube_api_key[256];
     char provider[32];
+    char language[8];
     int lines;
     int width;
     int font_size;

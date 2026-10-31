@@ -29,6 +29,7 @@ static int parse_bool(const char *value, int fallback) {
 void config_defaults(AppConfig *cfg) {
     memset(cfg, 0, sizeof(*cfg));
     snprintf(cfg->provider, sizeof(cfg->provider), "auto");
+    snprintf(cfg->language, sizeof(cfg->language), "en");
     cfg->lines = 6;
     cfg->width = 700;
     cfg->font_size = 18;
@@ -75,6 +76,8 @@ void config_load(AppConfig *cfg, const char *path) {
 
         if (strcmp(key, "stream_url") == 0) {
             snprintf(cfg->stream_url, sizeof(cfg->stream_url), "%s", value);
+        } else if (strcmp(key, "language") == 0) {
+            snprintf(cfg->language, sizeof(cfg->language), "%s", value);
         } else if (strcmp(key, "provider") == 0) {
             snprintf(cfg->provider, sizeof(cfg->provider), "%s", value);
         } else if (strcmp(key, "youtube_api_key") == 0) {

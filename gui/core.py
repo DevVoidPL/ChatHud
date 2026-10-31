@@ -11,7 +11,7 @@ from urllib.parse import urlparse, parse_qs
 import uuid
 
 DEFAULTS = {
-    'stream_url': '', 'provider': 'auto', 'youtube_api_key': '',
+    'stream_url': '', 'language': 'en', 'provider': 'auto', 'youtube_api_key': '',
     'lines': '6', 'width': '700', 'font_size': '18', 'header_font_size': '16',
     'show_header': '1', 'background_opacity': '0.62', 'margin': '24',
     'monitor': 'primary', 'position': 'top-right', 'text_align': 'left', 'message_order': 'oldest-first',
@@ -44,9 +44,22 @@ def validate_url(value: str) -> str:
         raise ValueError('Link jest zbyt długi lub zawiera spacje.')
     parsed = urlparse(value)
     if parsed.scheme not in ('http', 'https') or parsed.username or parsed.password:
-        raise ValueError('Wklej pełny link https:// do transmisji YouTube Live.')
+        raise ValueError('Wklej pełny link https:// do YouTube Live lub kanału Twitch.')
     host = (parsed.hostname or '').lower()
     valid = False
+    try:
+        port = parsed.port
+    except ValueError:
+        raise ValueError('Nieprawidłowy port w linku.') from None
+    if port is not None and port not in (80, 443):
+        raise ValueError('Nieprawidłowy port w linku.')
+    if host in ('twitch.tv', 'www.twitch.tv', 'm.twitch.tv'):
+        match = re.fullmatch(r'/([A-Za-z0-9_]{1,25})/?', parsed.path)
+        reserved = {'directory', 'videos', 'settings', 'downloads', 'inventory', 'subscriptions',
+                    'wallet', 'jobs', 'p', 'search', 'turbo', 'login', 'signup', 'moderator', 'dashboard'}
+        if not match or match[1].lower() in reserved:
+            raise ValueError('Wklej link do kanału Twitch: https://www.twitch.tv/nazwa_kanału')
+        return 'https://www.twitch.tv/' + match[1].lower()
     if host in ('youtu.be', 'www.youtu.be'):
         valid = bool(re.fullmatch(r'/[A-Za-z0-9_-]{11}/?', parsed.path))
     elif host in ('youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com'):
@@ -54,7 +67,7 @@ def validate_url(value: str) -> str:
         valid = (parsed.path == '/watch' and bool(re.fullmatch(r'[A-Za-z0-9_-]{11}', video)))
         valid |= bool(re.fullmatch(r'/(?:live|shorts)/[A-Za-z0-9_-]{11}/?', parsed.path))
     if not valid:
-        raise ValueError('Użyj linku do konkretnego live’a: youtube.com/watch?v=… lub youtu.be/…')
+        raise ValueError('Użyj linku do YouTube Live lub kanału Twitch: twitch.tv/nazwa_kanału')
     return value
 
 
@@ -89,7 +102,7 @@ def write_config(path: Path, values: dict[str, str]) -> None:
     for key, value in values.items():
         if '\n' in value or '\r' in value or '\n' in key:
             raise ValueError('Ustawienia nie mogą zawierać znaków nowego wiersza.')
-    existing = path.read_text(encoding='utf-8').splitlines() if path.exists() else ['# ChatHUD 0.6.0']
+    existing = path.read_text(encoding='utf-8').splitlines() if path.exists() else ['# ChatHUD 0.7.0']
     output, seen = [], set()
     for line in existing:
         key, sep, _ = line.strip().partition('=')
@@ -176,3 +189,11 @@ def steam_games(home: Path | None = None) -> list[str]:
             except (OSError, UnicodeError):
                 pass
     return sorted(names, key=str.casefold)
+
+
+def stream_platform(value: str) -> str:
+    try:
+        host = (urlparse(normalize_url(value)).hostname or '').lower()
+    except ValueError:
+        return 'youtube'
+    return 'twitch' if host in ('twitch.tv', 'www.twitch.tv', 'm.twitch.tv') else 'youtube'

@@ -156,7 +156,7 @@ static int fetch_live_chat_id(const char *video_id, const char *api_key,
     }
 
     if (code != 200) {
-        snprintf(err, err_size, "YouTube API zwróciło HTTP %ld", code);
+        snprintf(err, err_size, "YouTube API: HTTP %ld", code);
         json_object_put(root);
         return 0;
     }
@@ -202,7 +202,7 @@ static int parse_chat_page(ChatState *state, const char *body,
             json_object_is_type(message_obj, json_type_string)) {
             msg = json_object_get_string(message_obj);
         }
-        snprintf(err, err_size, "YouTube API: %s", msg ? msg : "błąd czatu");
+        snprintf(err, err_size, "YouTube API: %s", msg ? msg : "chat error");
         json_object_put(root);
         return 0;
     }

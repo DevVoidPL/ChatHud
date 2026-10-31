@@ -18,12 +18,14 @@ try:
         QTextEdit, QVBoxLayout, QWidget,
     )
 except ImportError:
-    sys.exit('ChatHUD GUI wymaga PySide6. Arch: sudo pacman -S pyside6 | Ubuntu: sudo apt install python3-pyside6.qtwidgets python3-pyside6.qtsvg')
+    sys.exit('ChatHUD GUI requires / wymaga PySide6. Arch: sudo pacman -S pyside6 qt6-svg | Debian/Ubuntu: sudo apt install python3-pyside6.qtwidgets python3-pyside6.qtsvg')
 
-from core import DEFAULTS, POSITIONS, ProfileStore, launch_options, read_config, steam_games, validate_url, write_config
+from core import DEFAULTS, POSITIONS, ProfileStore, launch_options, read_config, steam_games, validate_url, write_config, stream_platform
+
+from i18n import tr, set_language, load_language, save_language
 
 ROOT = Path(__file__).resolve().parent.parent
-VERSION = '0.6.1'
+VERSION = '0.7.0'
 APP_ID = 'io.github.DevVoidPL.ChatHUD'
 STYLE = '''
 QWidget { color: #e6ebf6; font-family: "Inter", "Noto Sans", sans-serif; font-size: 13px; }
@@ -71,8 +73,30 @@ QToolTip { color: #f1f5ff; background: #253044; border: 1px solid #516581; paddi
 '''
 
 
+def bind(widget, kind, source):
+    widget.setProperty('i18n_' + kind, source)
+    getattr(widget, 'set' + kind[0].upper() + kind[1:])(tr(source))
+
+
+def checkbox(text):
+    item = QCheckBox()
+    bind(item, 'text', text)
+    return item
+
+
+def add_combo_item(widget, source, value=None):
+    widget.addItem(tr(source), value)
+    widget.setItemData(widget.count()-1, source, int(Qt.ItemDataRole.UserRole)+1)
+
+
+def add_tab(tabs, widget, source):
+    widget.setProperty('i18n_tab', source)
+    tabs.addTab(widget, tr(source))
+
+
 def label(text, style=None):
-    item = QLabel(text)
+    item = QLabel()
+    bind(item, 'text', text)
     item.setTextFormat(Qt.TextFormat.PlainText)
     if style:
         item.setObjectName(style)
@@ -80,7 +104,8 @@ def label(text, style=None):
 
 
 def button(text, action, style=None):
-    item = QPushButton(text)
+    item = QPushButton()
+    bind(item, 'text', text)
     if style:
         item.setObjectName(style)
     item.clicked.connect(action)
@@ -144,9 +169,10 @@ class Preview(QWidget):
             messages.reverse()
         body = ''
         if v['show_header'] == '1':
-            body += f'<p style="color:#bed7ff;font-size:{max(9,int(v["header_font_size"])*.6)}px;margin:0 0 7px">YouTube · czat na żywo</p>'
+            platform = 'Twitch' if stream_platform(v.get('stream_url', '')) == 'twitch' else 'YouTube'
+            body += f'<p style="color:#bed7ff;font-size:{max(9,int(v["header_font_size"])*.6)}px;margin:0 0 7px">{platform} · {tr("czat na żywo")}</p>'
         for author, text in messages:
-            body += f'<p style="margin:0 0 5px"><b>{author}:</b> {text}</p>'
+            body += f'<p style="margin:0 0 5px"><b>{author}:</b> {tr(text)}</p>'
         doc = QTextDocument()
         doc.setDefaultFont(QFont('Noto Sans', 10))
         doc.setDefaultStyleSheet(f'body {{color:#f1f5ff;font-size:{font_px}px;text-align:{alignment}}}')
@@ -167,12 +193,14 @@ class Preview(QWidget):
         p.restore()
         p.setPen(QColor('#7d9cae'))
         p.setFont(QFont('Noto Sans', 8))
-        p.drawText(QRectF(12,h-23,150,17), 'SCENA POGLĄDOWA')
+        p.drawText(QRectF(12,h-23,180,17), tr('SCENA POGLĄDOWA'))
 
 
 class Window(QWidget):
     def __init__(self):
         super().__init__()
+        self.language = load_language()
+        set_language(self.language)
         self.store = ProfileStore()
         self.current = self.store.profiles[0]
         self.dirty = False
@@ -182,7 +210,7 @@ class Window(QWidget):
         self.preview_file = None
         self.monitor_query = None
         self.setObjectName('window')
-        self.setWindowTitle(f'ChatHUD {VERSION} — centrum ustawień')
+        bind(self, 'windowTitle', f'ChatHUD {VERSION} — centrum ustawień')
         self.setWindowIcon(QIcon(str(ROOT / 'assets/chathud.png')))
         self.resize(1240, 980)
         self.setMinimumSize(990, 740)
@@ -206,14 +234,14 @@ class Window(QWidget):
         side.addWidget(label('PROFILE GIER', 'muted'))
         self.profiles = QListWidget()
         self.profiles.setWordWrap(True)
-        self.profiles.addItems([p['name'] for p in self.store.profiles])
+        self.profiles.addItems([tr('Profil domyślny') if p['id'] == 'default' else p['name'] for p in self.store.profiles])
         self.profiles.setCurrentRow(0)
         self.profiles.currentRowChanged.connect(self.switch_profile)
         side.addWidget(self.profiles, 1)
         side.addWidget(button('+  Dodaj profil', self.add_profile, 'quiet'))
         side.addSpacing(20)
         side.addWidget(label('Natywny overlay Linux', 'muted'))
-        side.addWidget(label(f'Wersja {VERSION}  /  YouTube Live', 'muted'))
+        side.addWidget(label(f'Wersja {VERSION}  /  YouTube + Twitch', 'muted'))
         outer.addWidget(sidebar)
         area = QScrollArea()
         area.setWidgetResizable(True)
@@ -229,6 +257,14 @@ class Window(QWidget):
         titles.addWidget(self.heading)
         titles.addWidget(label('Ustaw raz. Zmieniaj live’a bez zmieniania komendy w Steam.', 'muted'))
         top.addLayout(titles, 1)
+        self.language_switch = QComboBox()
+        self.language_switch.setFixedWidth(105)
+        self.language_switch.addItem('Polski', 'pl')
+        self.language_switch.addItem('English', 'en')
+        self.language_switch.setCurrentIndex(self.language_switch.findData(self.language))
+        bind(self.language_switch, 'accessibleName', 'Language / Język')
+        self.language_switch.currentIndexChanged.connect(self.change_language)
+        top.addWidget(self.language_switch)
         self.save_button = button('Zapisz profil', self.save, 'primary')
         top.addWidget(self.save_button)
         main.addLayout(top)
@@ -236,12 +272,12 @@ class Window(QWidget):
         stream, stream_layout = card()
         stream_layout.addWidget(label('01  Transmisja', 'section'))
         self.url = QLineEdit()
-        self.url.setPlaceholderText('Wklej link do YouTube Live, np. https://youtube.com/watch?v=…')
+        bind(self.url, 'placeholderText', 'Wklej link do YouTube Live lub Twitch: https://www.twitch.tv/kanał')
         self.url.setMaxLength(2047)
         self.url.setClearButtonEnabled(True)
         self.url.textChanged.connect(self.changed)
         stream_layout.addWidget(self.url)
-        stream_layout.addWidget(label('Link zapisuje się w tym profilu. Bez klucza API przy użyciu yt-dlp.', 'muted'))
+        stream_layout.addWidget(label('YouTube: link do live’a. Twitch: link do kanału. Serwis rozpoznawany automatycznie.', 'muted'))
         main.addWidget(stream)
         columns = QHBoxLayout()
         columns.setSpacing(17)
@@ -252,12 +288,12 @@ class Window(QWidget):
         monitor_row.addWidget(label('Monitor'))
         self.monitor = QComboBox()
         self.monitor.setFixedHeight(32)
-        self.monitor.addItem('Główny monitor', 'primary')
+        add_combo_item(self.monitor, 'Główny monitor', 'primary')
         self.monitor.currentIndexChanged.connect(self.changed)
         monitor_row.addWidget(self.monitor, 1)
         refresh_monitor = button('↻', self.refresh_monitors, 'quiet')
         refresh_monitor.setFixedWidth(36)
-        refresh_monitor.setToolTip('Odśwież listę monitorów')
+        bind(refresh_monitor, 'toolTip', 'Odśwież listę monitorów')
         monitor_row.addWidget(refresh_monitor)
         preview_layout.addLayout(monitor_row)
         self.preview = Preview()
@@ -270,8 +306,8 @@ class Window(QWidget):
         controls.addWidget(self.live_button)
         preview_layout.addLayout(controls)
         self.stop_button = button('■', self.stop_overlay, 'quiet')
-        self.stop_button.setToolTip('Zatrzymaj test')
-        self.stop_button.setAccessibleName('Zatrzymaj test')
+        bind(self.stop_button, 'toolTip', 'Zatrzymaj test')
+        bind(self.stop_button, 'accessibleName', 'Zatrzymaj test')
         self.stop_button.setFixedWidth(44)
         self.stop_button.setEnabled(False)
         controls.addWidget(self.stop_button)
@@ -293,14 +329,14 @@ class Window(QWidget):
         for index, (key, title) in enumerate(POSITIONS):
             item = QPushButton(arrows[index])
             item.setObjectName('position')
-            item.setToolTip(title)
-            item.setAccessibleName(title)
+            bind(item, 'toolTip', title)
+            bind(item, 'accessibleName', title)
             item.setCheckable(True)
             item.setFixedHeight(28)
             self.position_group.addButton(item, index)
             grid.addWidget(item, index//3, index%3)
         self.position_group.idClicked.connect(self.changed)
-        form.addRow('Pozycja', grid)
+        form.addRow(label('Pozycja'), grid)
         self.spin(form, 'width', 'Szerokość', 220, 1800, ' px')
         self.spin(form, 'font_size', 'Tekst', 8, 64, ' pt')
         self.spin(form, 'lines', 'Wiadomości', 1, 32)
@@ -312,9 +348,9 @@ class Window(QWidget):
         self.opacity_label = label('62%')
         self.opacity_label.setFixedWidth(36)
         slider_row.addWidget(self.opacity_label)
-        form.addRow('Krycie tła', slider_row)
+        form.addRow(label('Krycie tła'), slider_row)
         self.check(form, 'show_header', 'Nazwa kanału w nagłówku')
-        tabs.addTab(appearance, 'Wygląd')
+        add_tab(tabs, appearance, 'Wygląd')
         advanced = QWidget()
         adv = QFormLayout(advanced)
         adv.setContentsMargins(0, 2, 0, 0)
@@ -326,25 +362,25 @@ class Window(QWidget):
         self.spin(adv, 'emote_size', 'Rozmiar emotek', 12, 64, ' px')
         self.spin(adv, 'refresh_ms', 'Odświeżanie', 30, 1000, ' ms')
         self.check(adv, 'emotes', 'Własne emotki YouTube')
-        self.combo(adv, 'provider', 'Źródło czatu', [('auto','Automatycznie'),('yt-dlp','yt-dlp'),('api','YouTube API')])
+        self.combo(adv, 'provider', 'Źródło YouTube', [('auto','Automatycznie'),('yt-dlp','yt-dlp'),('api','YouTube API')])
         api = QLineEdit()
         api.setEchoMode(QLineEdit.EchoMode.Password)
         api.setMaxLength(255)
-        api.setPlaceholderText('Tylko dla YouTube API')
+        bind(api, 'placeholderText', 'Tylko dla YouTube API')
         api.textChanged.connect(self.changed)
         self.fields['youtube_api_key'] = api
-        adv.addRow('Klucz API', api)
+        adv.addRow(label('Klucz API'), api)
         advanced_scroll = QScrollArea()
         advanced_scroll.setWidgetResizable(True)
         advanced_scroll.setWidget(advanced)
-        tabs.addTab(advanced_scroll, 'Zaawansowane')
+        add_tab(tabs, advanced_scroll, 'Zaawansowane')
         settings_layout.addWidget(tabs, 1)
         columns.addWidget(settings, 4)
         main.addLayout(columns)
         steam, steam_layout = card()
         steam_head = QHBoxLayout()
         steam_head.addWidget(label('03  Opcje uruchamiania Steam', 'section'), 1)
-        self.mangohud = QCheckBox('Dodaj MangoHud')
+        self.mangohud = checkbox('Dodaj MangoHud')
         self.mangohud.toggled.connect(self.changed)
         steam_head.addWidget(self.mangohud)
         steam_layout.addLayout(steam_head)
@@ -373,6 +409,51 @@ class Window(QWidget):
         self.load_profile()
         QTimer.singleShot(0, self.refresh_monitors)
 
+    def change_language(self):
+        selected = self.language_switch.currentData()
+        if selected == self.language:
+            return
+        try:
+            save_language(selected)
+        except (OSError, ValueError) as error:
+            self.language_switch.blockSignals(True)
+            self.language_switch.setCurrentIndex(self.language_switch.findData(self.language))
+            self.language_switch.blockSignals(False)
+            self.error(error)
+            return
+        self.language = selected
+        set_language(selected)
+        self.retranslate()
+        self.changed()
+
+    def retranslate(self):
+        for widget in [self, *self.findChildren(QWidget)]:
+            for kind in ('text', 'windowTitle', 'toolTip', 'placeholderText', 'accessibleName'):
+                original = widget.property('i18n_' + kind)
+                if original is None:
+                    continue
+                if widget is self.heading and self.current['id'] != 'default':
+                    continue
+                getattr(widget, 'set' + kind[0].upper() + kind[1:])(tr(original))
+            if isinstance(widget, QComboBox):
+                previous = widget.blockSignals(True)
+                for index in range(widget.count()):
+                    original = widget.itemData(index, int(Qt.ItemDataRole.UserRole)+1)
+                    if original is not None:
+                        widget.setItemText(index, tr(original))
+                widget.blockSignals(previous)
+            elif isinstance(widget, QTabWidget):
+                for index in range(widget.count()):
+                    original = widget.widget(index).property('i18n_tab')
+                    if original:
+                        widget.setTabText(index, tr(original))
+        for index, profile in enumerate(self.store.profiles):
+            if profile['id'] == 'default':
+                self.profiles.item(index).setText(tr('Profil domyślny'))
+        if self.current['id'] == 'default':
+            self.heading.setText(tr('Twój czat w grze'))
+        self.render()
+
     def spin(self, form, key, title, minimum, maximum, suffix=''):
         item = QSpinBox()
         item.setRange(minimum, maximum)
@@ -381,19 +462,19 @@ class Window(QWidget):
         item.setButtonSymbols(QSpinBox.ButtonSymbols.UpDownArrows)
         item.valueChanged.connect(self.changed)
         self.fields[key] = item
-        form.addRow(title, item)
+        form.addRow(label(title), item)
 
     def combo(self, form, key, title, options):
         item = QComboBox()
         item.setFixedHeight(32)
         for value, name in options:
-            item.addItem(name, value)
+            add_combo_item(item, name, value)
         item.currentIndexChanged.connect(self.changed)
         self.fields[key] = item
-        form.addRow(title, item)
+        form.addRow(label(title), item)
 
     def check(self, form, key, title):
-        item = QCheckBox(title)
+        item = checkbox(title)
         item.toggled.connect(self.changed)
         self.fields[key] = item
         form.addRow(item)
@@ -445,24 +526,25 @@ class Window(QWidget):
                     title += ' (główny)'
                 entries.append((title, name))
         except (ValueError, KeyError, TypeError) as error:
-            self.monitor.setToolTip(str(error) + ' Zapisany wybór zostaje zachowany.')
+            bind(self.monitor, 'toolTip', str(error) + ' Zapisany wybór zostaje zachowany.')
             return
         selected = self.monitor.currentData() or 'primary'
         self.monitor.blockSignals(True)
         self.monitor.clear()
-        self.monitor.addItem('Główny monitor', 'primary')
+        add_combo_item(self.monitor, 'Główny monitor', 'primary')
         for title, name in entries:
-            self.monitor.addItem(title, name)
+            add_combo_item(self.monitor, title, name)
         if self.monitor.findData(selected) < 0:
-            self.monitor.addItem(selected + ' (odłączony — użyty będzie główny)', selected)
+            add_combo_item(self.monitor, selected + ' (odłączony — użyty będzie główny)', selected)
         self.monitor.setCurrentIndex(max(0, self.monitor.findData(selected)))
         self.monitor.blockSignals(False)
-        self.monitor.setToolTip('Pozycja czatu jest liczona tylko w obrębie tego monitora. Odłączony ekran zastępuje monitor główny.')
+        bind(self.monitor, 'toolTip', 'Pozycja czatu jest liczona tylko w obrębie tego monitora. Odłączony ekran zastępuje monitor główny.')
 
     def values(self):
         values = {'stream_url': self.url.text().strip(),
                   'background_opacity': f'{self.opacity.value()/100:.2f}',
-                  'position': POSITIONS[max(0,self.position_group.checkedId())][0]}
+                  'position': POSITIONS[max(0,self.position_group.checkedId())][0],
+                  'language': self.language}
         for key, item in self.fields.items():
             if isinstance(item, QSpinBox):
                 values[key] = str(item.value())
@@ -477,7 +559,7 @@ class Window(QWidget):
     def load_profile(self):
         self.loading = True
         values = read_config(self.store.path(self.current))
-        self.heading.setText('Twój czat w grze' if self.current['id'] == 'default' else self.current['name'])
+        self.heading.setText(tr('Twój czat w grze') if self.current['id'] == 'default' else self.current['name'])
         self.url.setText(values['stream_url'])
         def number(key, fallback):
             try:
@@ -494,7 +576,7 @@ class Window(QWidget):
                 item.setChecked(values[key].lower() in ('1','true','yes','on'))
             elif isinstance(item, QComboBox):
                 if key == 'monitor' and item.findData(values[key]) < 0:
-                    item.addItem(values[key] + ' (zapisany monitor)', values[key])
+                    add_combo_item(item, values[key] + ' (zapisany monitor)', values[key])
                 item.setCurrentIndex(max(0, item.findData(values[key])))
             else:
                 item.setText(values[key])
@@ -502,8 +584,8 @@ class Window(QWidget):
         self.loading = False
         self.dirty = False
         self.render()
-        self.save_button.setText('Zapisz profil')
-        self.status.setText('Gotowe do konfiguracji. ' + ('Brak yt-dlp — szczegóły w Diagnostyce.' if not shutil.which('yt-dlp') else 'yt-dlp jest dostępny.'))
+        bind(self.save_button, "text", 'Zapisz profil')
+        bind(self.status, "text", 'Gotowe do konfiguracji. ' + ('Brak yt-dlp — szczegóły w Diagnostyce.' if not shutil.which('yt-dlp') else 'yt-dlp jest dostępny.'))
 
     @staticmethod
     def opacity_value(text):
@@ -522,12 +604,12 @@ class Window(QWidget):
         if self.loading:
             return
         self.dirty = True
-        self.save_button.setText('Zapisz zmiany •')
-        self.status.setText('Niezapisane zmiany. Komenda zostanie zapisana przed skopiowaniem.')
+        bind(self.save_button, "text", 'Zapisz zmiany •')
+        bind(self.status, "text", 'Niezapisane zmiany. Komenda zostanie zapisana przed skopiowaniem.')
         self.render()
 
     def error(self, message):
-        QMessageBox.warning(self, 'ChatHUD', str(message))
+        QMessageBox.warning(self, 'ChatHUD', tr(str(message)))
 
     def save(self):
         try:
@@ -543,16 +625,21 @@ class Window(QWidget):
         self.url.setText(values['stream_url'])
         self.loading = False
         self.dirty = False
-        self.save_button.setText('Zapisz profil')
-        self.status.setText('Profil zapisany. Zmiany zadziałają przy następnym uruchomieniu overlaya.')
+        bind(self.save_button, "text", 'Zapisz profil')
+        bind(self.status, "text", 'Profil zapisany. Zmiany zadziałają przy następnym uruchomieniu overlaya.')
         return True
 
     def leave_profile(self):
         if not self.dirty:
             return True
-        answer = QMessageBox.question(self, 'Niezapisane zmiany', 'Zapisać zmiany w bieżącym profilu?',
-            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Save)
+        question = QMessageBox(self)
+        bind(question, 'windowTitle', tr('Niezapisane zmiany'))
+        question.setText(tr('Zapisać zmiany w bieżącym profilu?'))
+        question.setStandardButtons(QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel)
+        question.setDefaultButton(QMessageBox.StandardButton.Save)
+        for key, text in [(QMessageBox.StandardButton.Save, 'Zapisz'), (QMessageBox.StandardButton.Discard, 'Odrzuć'), (QMessageBox.StandardButton.Cancel, 'Anuluj')]:
+            question.button(key).setText(tr(text))
+        answer = question.exec()
         if answer == QMessageBox.StandardButton.Save:
             return self.save()
         return answer == QMessageBox.StandardButton.Discard
@@ -581,7 +668,7 @@ class Window(QWidget):
         if not self.leave_profile():
             return
         dialog = QDialog(self)
-        dialog.setWindowTitle('Nowy profil gry')
+        bind(dialog, 'windowTitle', 'Nowy profil gry')
         dialog.setMinimumWidth(420)
         layout = QVBoxLayout(dialog)
         layout.addWidget(label('Wybierz grę Steam lub wpisz własną nazwę.', 'section'))
@@ -589,10 +676,11 @@ class Window(QWidget):
         names.setEditable(True)
         names.addItems(steam_games())
         names.setCurrentIndex(-1)
-        names.setPlaceholderText('Nazwa gry / profilu')
+        bind(names, 'placeholderText', 'Nazwa gry / profilu')
         layout.addWidget(names)
         layout.addWidget(label('Każdy profil ma własny link i wygląd czatu.', 'muted'))
         actions = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        actions.button(QDialogButtonBox.StandardButton.Cancel).setText(tr('Anuluj'))
         actions.accepted.connect(dialog.accept)
         actions.rejected.connect(dialog.reject)
         layout.addWidget(actions)
@@ -611,7 +699,7 @@ class Window(QWidget):
 
     def copy_command(self):
         if not self.url.text().strip():
-            self.error('Najpierw wklej link do transmisji YouTube Live. Do sprawdzenia wyglądu użyj testu na pulpicie.')
+            self.error('Najpierw wklej link do YouTube Live lub Twitch. Do sprawdzenia wyglądu użyj testu na pulpicie.')
             return
         if not os.access(self.binary('chathud-steam'), os.X_OK) or not os.access(self.binary('chathud'), os.X_OK):
             self.error('Brakuje overlaya lub launchera. W katalogu projektu uruchom ./install.sh.')
@@ -621,7 +709,7 @@ class Window(QWidget):
             return
         if self.save():
             QApplication.clipboard().setText(self.command.toPlainText())
-            self.status.setText('Skopiowano. Wklej komendę w opcjach uruchamiania wybranej gry w Steam.')
+            bind(self.status, "text", 'Skopiowano. Wklej komendę w opcjach uruchamiania wybranej gry w Steam.')
 
     def start_overlay(self, demo):
         if self.process is not None:
@@ -635,10 +723,10 @@ class Window(QWidget):
             return
         if not demo:
             if not self.url.text().strip():
-                self.error('Wklej link do transmisji YouTube Live.')
+                self.error('Wklej link do YouTube Live lub Twitch.')
                 return
             provider = self.fields['provider'].currentData()
-            if provider in ('yt-dlp','auto') and not shutil.which('yt-dlp'):
+            if stream_platform(self.url.text()) == 'youtube' and provider in ('yt-dlp','auto') and not shutil.which('yt-dlp'):
                 if provider == 'yt-dlp' or not self.fields['youtube_api_key'].text().strip():
                     self.error('Brak yt-dlp. Arch: sudo pacman -S yt-dlp\nUbuntu / Debian: sudo apt install yt-dlp\nMożesz też wybrać YouTube API i podać klucz.')
                     return
@@ -675,7 +763,7 @@ class Window(QWidget):
         self.demo_button.setEnabled(False)
         self.live_button.setEnabled(False)
         self.stop_button.setEnabled(True)
-        self.status.setText('Test na pulpicie działa. Użyj przycisku ■, aby zatrzymać overlay.')
+        bind(self.status, "text", 'Test na pulpicie działa. Użyj przycisku ■, aby zatrzymać overlay.')
         process.start()
 
     def read_process_output(self):
@@ -705,7 +793,7 @@ class Window(QWidget):
         self.live_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         failed = code != 0 and not self.stopping
-        self.status.setText('Test zakończony.' if not failed else f'Overlay zakończył się z błędem ({code}).')
+        bind(self.status, "text", 'Test zakończony.' if not failed else f'Overlay zakończył się z błędem ({code}).')
         if failed and output:
             self.error(output[-1800:])
 
@@ -720,18 +808,18 @@ class Window(QWidget):
         lines = [f'ChatHUD {VERSION}', '']
         for name in ('chathud', 'chathud-steam'):
             path = self.binary(name)
-            lines.append(f'{name}: {"OK" if os.access(path, os.X_OK) else "BRAK"}\n{path}')
+            lines.append(f'{name}: {"OK" if os.access(path, os.X_OK) else tr("BRAK")}\n{path}')
         lines.extend(['', f'yt-dlp: {shutil.which("yt-dlp") or "BRAK — sudo pacman -S yt-dlp (Arch) / sudo apt install yt-dlp (Debian/Ubuntu)"}',
                       f'MangoHud: {shutil.which("mangohud") or "niewykryty (opcjonalny)"}',
-                      f'Sesja: {os.environ.get("XDG_SESSION_TYPE", "nieznana")}',
+                      f'Sesja: {os.environ.get("XDG_SESSION_TYPE") or tr("nieznana")}',
                       f'DISPLAY: {os.environ.get("DISPLAY", "BRAK — overlay wymaga X11/XWayland")}',
                       '', 'Overlay używa X11/XWayland. Widoczność nad grami Wayland zależy od kompozytora.',
                       f'Profil: {self.store.path(self.current)}',
                       f'Log Steam: {Path(os.environ.get("XDG_CACHE_HOME") or Path.home()/".cache") / "chathud/steam-wrapper.log"}'])
         dialog = QMessageBox(self)
-        dialog.setWindowTitle('ChatHUD — diagnostyka')
+        bind(dialog, 'windowTitle', 'ChatHUD — diagnostyka')
         dialog.setTextFormat(Qt.TextFormat.PlainText)
-        dialog.setText('\n'.join(lines))
+        bind(dialog, "text", '\n'.join(lines))
         dialog.exec()
 
     def open_profiles(self):
@@ -770,7 +858,7 @@ def main():
     try:
         window = Window()
     except (OSError, ValueError, KeyError, TypeError) as error:
-        QMessageBox.critical(None, 'ChatHUD — błąd konfiguracji', f'Nie można odczytać profili. Pliki pozostawiono bez zmian.\n\n{error}')
+        QMessageBox.critical(None, tr('ChatHUD — błąd konfiguracji'), tr(f'Nie można odczytać profili. Pliki pozostawiono bez zmian.\n\n{error}'))
         return 1
     window.show()
     return app.exec()

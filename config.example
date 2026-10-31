@@ -1,7 +1,10 @@
-# ChatHUD v0.6.1
-# Link zapisany przez GUI. --url w komendzie ma pierwszeństwo.
+# ChatHUD v0.7.0
+# YouTube Live or Twitch channel URL. --url overrides this value.
 stream_url=
-# auto = yt-dlp, jeśli dostępny; inaczej oficjalne YouTube API
+# Language for overlay messages: en / pl (set by the desktop app).
+language=en
+# YouTube: auto uses yt-dlp when available, otherwise the official API.
+# Twitch is detected from stream_url and uses its own IRC backend.
 provider=auto
 youtube_api_key=
 

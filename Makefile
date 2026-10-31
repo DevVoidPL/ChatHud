@@ -6,7 +6,7 @@ DATA_HOME ?= $(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)
 CPPFLAGS += -Isrc $(shell pkg-config --cflags x11 xrandr xfixes xext cairo pangocairo libcurl json-c libjpeg libwebp)
 LDLIBS += $(shell pkg-config --libs x11 xrandr xfixes xext cairo pangocairo libcurl json-c libjpeg libwebp) -lpthread -lm
 
-SRC = src/main.c src/monitor.c src/config.c src/youtube.c src/ytdlp.c src/overlay.c src/emote.c src/image.c
+SRC = src/main.c src/monitor.c src/config.c src/youtube.c src/ytdlp.c src/twitch.c src/i18n.c src/overlay.c src/emote.c src/image.c
 OBJ = $(SRC:.c=.o)
 DEP = $(OBJ:.o=.d)
 BIN = chathud
@@ -32,6 +32,7 @@ install: $(BIN)
 	install -Dm755 chathud-gui "$(PREFIX)/bin/chathud-gui"
 	install -Dm644 gui/app.py "$(DATA_HOME)/chathud/gui/app.py"
 	install -Dm644 gui/core.py "$(DATA_HOME)/chathud/gui/core.py"
+	install -Dm644 gui/i18n.py "$(DATA_HOME)/chathud/gui/i18n.py"
 	install -Dm644 assets/chathud.png "$(DATA_HOME)/chathud/assets/chathud.png"
 	install -Dm644 assets/check.svg "$(DATA_HOME)/chathud/assets/check.svg"
 	python3 gui/install_desktop.py "$(PREFIX)" "$(DATA_HOME)" chathud.desktop

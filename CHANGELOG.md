@@ -2,6 +2,22 @@
 
 All notable changes to ChatHUD will be documented here.
 
+## [0.7.0] - 2026-10-31
+
+### Added
+- English and Polish UI with a persistent language selector; switching keeps the current input and unsaved settings.
+- Twitch channel URLs with a read-only anonymous IRC backend over TLS, reconnects, keepalive handling and moderation deletions.
+- English and Polish built-in overlay status messages.
+
+### Changed
+- Stream URLs select the platform automatically; the YouTube backend setting only applies to YouTube.
+- Twitch works independently of yt-dlp and YouTube API keys.
+- Shorter English and Polish installation and usage documentation.
+
+### Limitations
+- Twitch emote images, BTTV, FFZ and 7TV are not implemented; emote names remain text.
+- Anonymous IRC access depends on Twitch continuing to allow guest readers.
+
 ## [0.6.1] - 2026-10-31
 
 ### Added

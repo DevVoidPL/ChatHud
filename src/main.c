@@ -4,6 +4,7 @@
 #include "monitor.h"
 #include "youtube.h"
 #include "ytdlp.h"
+#include "twitch.h"
 
 #include <curl/curl.h>
 #include <pthread.h>
@@ -65,29 +66,29 @@ static void normalize_url_arg(const char *input, char *out, size_t out_size) {
 
 static void usage(const char *argv0) {
     fprintf(stderr,
-        "ChatHUD 0.6.1\n\n"
-        "Użycie:\n"
+        "ChatHUD 0.7.0\n\n"
+        "Usage:\n"
         "  %s --url URL -- %%command%%\n"
         "  %s --url URL --no-game\n"
         "  %s --demo --no-game\n\n"
-        "Opcje:\n"
-        "  --url URL       Link do YouTube Live (nadpisuje stream_url w configu)\n"
-        "  --api-key KEY   Nadpisz youtube_api_key z configu\n"
-        "  --config PATH   Własny plik configu\n"
-        "  --no-game       Pokaż overlay bez uruchamiania gry\n"
-        "  --demo          Wstaw przykładowe wiadomości\n"
-        "  --list-monitors Lista monitorów X11/XWayland w JSON\n"
-        "  --help          Pokaż pomoc\n",
+        "Options:\n"
+        "  --url URL       YouTube Live / Twitch channel URL (overrides stream_url)\n"
+        "  --api-key KEY   Override youtube_api_key in the config\n"
+        "  --config PATH   Configuration file\n"
+        "  --no-game       Show the overlay without launching a game\n"
+        "  --demo          Show sample messages\n"
+        "  --list-monitors List X11/XWayland monitors as JSON\n"
+        "  --help          Show this help\n",
         argv0, argv0, argv0);
 }
 
 static void add_demo_messages(ChatState *state) {
     chat_state_set_status(state, "ChatHUD demo", 0);
-    chat_state_add(state, "DevVoidPL", "siema, to już leci nad grą");
-    chat_state_add(state, "PixelCat", "boss za tobą xD");
-    chat_state_add(state, "LinuxEnjoyer", "MangoHud + ChatHUD brzmi dobrze");
-    chat_state_add(state, "Karton", "test polskich znaków: ąęśćżźółń");
-    chat_state_add(state, "BarryFan", "lekki overlay bez Electrona");
+    chat_state_add(state, "DevVoidPL", state->language_pl ? "siema, to już leci nad grą" : "hello from the in-game chat");
+    chat_state_add(state, "PixelCat", state->language_pl ? "boss za tobą xD" : "boss behind you!");
+    chat_state_add(state, "LinuxEnjoyer", state->language_pl ? "MangoHud + ChatHUD brzmi dobrze" : "MangoHud + ChatHUD sounds good");
+    chat_state_add(state, "Karton", state->language_pl ? "test polskich znaków: ąęśćżźółń" : "Unicode works: ąęśćżźółń");
+    chat_state_add(state, "BarryFan", state->language_pl ? "lekki overlay bez Electrona" : "native Linux overlay");
 }
 
 /*
@@ -151,10 +152,12 @@ static int run_overlay_worker(const AppConfig *cfg,
                               pid_t watch_pid) {
     ChatState state;
     chat_state_init(&state);
+    state.language_pl = strcmp(cfg->language, "pl") == 0;
     g_state = &state;
 
     signal(SIGINT, on_signal);
     signal(SIGTERM, on_signal);
+    signal(SIGPIPE, SIG_IGN);
 
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         fprintf(stderr, "ChatHUD: curl_global_init nie powiodło się.\n");
@@ -166,11 +169,18 @@ static int run_overlay_worker(const AppConfig *cfg,
     int chat_thread_started = 0;
     YouTubeThreadArgs yt_args;
     YtDlpThreadArgs ytdlp_args;
+    TwitchThreadArgs twitch_args;
     memset(&yt_args, 0, sizeof(yt_args));
     memset(&ytdlp_args, 0, sizeof(ytdlp_args));
+    memset(&twitch_args, 0, sizeof(twitch_args));
 
     if (demo) {
         add_demo_messages(&state);
+    } else if (twitch_extract_channel(url, twitch_args.channel, sizeof(twitch_args.channel))) {
+        twitch_args.state = &state;
+        if (pthread_create(&chat_thread, NULL, twitch_thread, &twitch_args) == 0)
+            chat_thread_started = 1;
+        else chat_state_set_status(&state, "Could not start Twitch chat", 1);
     } else {
         int want_ytdlp = strcmp(cfg->provider, "yt-dlp") == 0 ||
             (strcmp(cfg->provider, "auto") == 0 && ytdlp_available());

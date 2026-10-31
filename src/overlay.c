@@ -341,7 +341,7 @@ static void render_overlay(cairo_t *cr, PangoLayout *layout, PangoFontDescriptio
         pango_font_description_set_weight(font, PANGO_WEIGHT_NORMAL);
         pango_layout_set_font_description(layout, font);
         pango_layout_set_attributes(layout, NULL);
-        pango_layout_set_text(layout, "Czekam na wiadomości…", -1);
+        pango_layout_set_text(layout, chat_translate("Czekam na wiadomości…", strcmp(cfg->language, "pl") == 0), -1);
         pango_layout_set_width(layout, content_w * PANGO_SCALE);
         pango_layout_set_alignment(layout, text_alignment(cfg));
         draw_layout_with_shadow(cr, layout, px + pad, y);

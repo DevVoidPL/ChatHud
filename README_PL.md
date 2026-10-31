@@ -1,48 +1,28 @@
-<p align="center">
-  <img src="assets/chathud-banner.png" alt="ChatHUD — czat YouTube Live nad grą w Linuksie, z integracją Steam / Proton." width="100%" />
-</p>
+![ChatHUD](assets/chathud-banner.png)
 
-<p align="center">
-  <a href="README.md">English</a> · <strong>Polski</strong><br />
-  <a href="#instalacja">Instalacja</a> · <a href="#pierwsze-uruchomienie">Pierwsze uruchomienie</a> · <a href="#opcje-uruchamiania-steam">Steam</a> · <a href="#rozwiązywanie-problemów">Pomoc</a> · <a href="CHANGELOG.md">Historia zmian</a>
-</p>
+[English](README.md) · [Historia zmian](CHANGELOG.md)
 
 # ChatHUD
 
-**Czat YouTube Live widoczny podczas gry.**
+ChatHUD wyświetla czat YouTube Live i Twitcha nad grami w Linuksie. Overlay jest napisany w C, a osobna aplikacja Qt służy do ustawiania wyglądu, profili i komend Steam. Podczas gry panel ustawień może być zamknięty.
 
-ChatHUD wyświetla przezroczysty panel czatu nad grą w Linuksie. Wklej link do transmisji, wybierz monitor i zapisz profil gry w aplikacji graficznej. Podczas gry działa natywny overlay napisany w C; panel ustawień Qt możesz zamknąć.
+**Wersja 0.7.0 — wczesna alpha.** Overlay korzysta z X11/XWayland. Nie ma jeszcze paczki Flatpak ani AppImage; instalacja polega na zbudowaniu programu z kodu źródłowego.
 
-To narzędzie do śledzenia czatu na ekranie, z którego już korzystasz — z launcherem Steam/Proton i opcjonalną obsługą MangoHud. Overlay przepuszcza kliknięcia do gry.
+- Linki do YouTube Live i kanałów Twitch, rozpoznawane automatycznie.
+- Osobny link, monitor i wygląd czatu dla każdej gry.
+- Przepuszczanie kliknięć do gry, zawijanie wiadomości, rozmiary tekstu, krycie tła i dziewięć pozycji w obrębie wybranego monitora.
+- Polski i angielski interfejs, przełączany bez restartu panelu.
+- Launcher Steam/Proton i opcjonalna obsługa MangoHud.
 
-> **Wersja 0.6.1 · wczesna alpha.** Obecnie instalacja odbywa się z kodu źródłowego. Flatpak, AppImage i oficjalne paczki dystrybucji są w planach. Overlay w sesji Wayland korzysta z XWayland.
+![ChatHUD podczas gry](assets/chathud-ingame.png)
 
-## Co oferuje aplikacja
-
-| Funkcja | Do czego służy |
-| --- | --- |
-| **YouTube Live** | Link do publicznej transmisji wystarczy przy użyciu `yt-dlp`; klucz Google API jest opcjonalny. |
-| **Graficzny panel po polsku** | Ustawianie wyglądu, podgląd, sprawdzenie zależności i kopiowanie komendy Steam. |
-| **Profile gier** | Osobny link i wygląd czatu dla każdej gry. |
-| **Wybór monitora** | Pozycja czatu jest liczona względem wybranego ekranu. |
-| **Czytelne wiadomości** | Zawijanie tekstu, nazwa kanału, rozmiary czcionek, krycie tła, wyrównanie i kolejność. |
-| **Emotki** | Własne emotki YouTube z pamięcią podręczną oraz tekst Unicode. |
-| **Steam / Proton** | Osobny launcher uruchamia overlay z bibliotekami systemu, zachowując środowisko gry. |
-
-### Przykład podczas gry
-
-![ChatHUD z czatem YouTube Live w prawym górnym rogu gry](assets/chathud-ingame.png)
-
-*Rzeczywisty zrzut z wcześniejszej wersji. Grafika w nagłówku jest ilustracją promocyjną.*
+*Zrzut z gry z wcześniejszej wersji programu.*
 
 ## Instalacja
 
-Potrzebujesz Linuksa, kompilatora C, Pythona 3.10+ do panelu graficznego i bibliotek podanych poniżej. Overlay wymaga X11 lub XWayland. `yt-dlp` pobiera czat, a MangoHud jest dodatkiem opcjonalnym.
+### Zależności
 
-### 1. Zainstaluj zależności
-
-<details open>
-<summary><strong>Arch Linux / EndeavourOS</strong></summary>
+Arch Linux / EndeavourOS:
 
 ```bash
 sudo pacman -S --needed \
@@ -51,10 +31,7 @@ sudo pacman -S --needed \
   curl json-c libjpeg-turbo libwebp yt-dlp
 ```
 
-</details>
-
-<details>
-<summary><strong>Debian 13 / Ubuntu 26.04</strong></summary>
+Debian 13 / Ubuntu 26.04:
 
 ```bash
 sudo apt update
@@ -66,37 +43,9 @@ sudo apt install \
   libjson-c-dev libjpeg-dev libwebp-dev yt-dlp
 ```
 
-W Ubuntu pakiety PySide6 są w repozytorium **Universe**. Na starszych wydaniach dostępność pakietów może się różnić — wtedy skorzystaj z wariantu poniżej.
+Pakiety PySide6 w Ubuntu są w repozytorium Universe. Na starszych wydaniach, które ich nie mają, skorzystaj z opisanego niżej środowiska Pythona. `yt-dlp` jest potrzebny do domyślnego backendu YouTube; Twitch korzysta bezpośrednio z libcurl.
 
-</details>
-
-<details>
-<summary><strong>Starszy Debian / Ubuntu — osobne środowisko Pythona dla panelu</strong></summary>
-
-Zainstaluj biblioteki i narzędzia do budowy:
-
-```bash
-sudo apt update
-sudo apt install \
-  git build-essential pkg-config python3 python3-venv \
-  libx11-dev libxrandr-dev libxfixes-dev libxext-dev \
-  libcairo2-dev libpango1.0-dev libcurl4-openssl-dev \
-  libjson-c-dev libjpeg-dev libwebp-dev yt-dlp
-```
-
-Korzystając z Pythona 3.10 lub nowszego, utwórz środowisko Qt dla ChatHUD:
-
-```bash
-CHATHUD_VENV="${XDG_DATA_HOME:-$HOME/.local/share}/chathud/venv"
-python3 -m venv "$CHATHUD_VENV"
-"$CHATHUD_VENV/bin/python" -m pip install 'PySide6>=6.5,<7'
-```
-
-Launcher `chathud-gui` automatycznie użyje tego środowiska, także przy uruchamianiu z menu aplikacji. Gdy go nie ma, korzysta z systemowego Pythona. Instalacja nie wymaga `sudo pip`.
-
-</details>
-
-### 2. Pobierz i zainstaluj ChatHUD
+### Pobranie i budowanie
 
 ```bash
 git clone https://github.com/DevVoidPL/ChatHud.git
@@ -104,33 +53,41 @@ cd ChatHud
 ./install.sh
 ```
 
-Uruchom `./install.sh` jako zwykły użytkownik. Skrypt buduje overlay, instaluje launchery i wpis w menu oraz zachowuje istniejącą konfigurację. Uprawnień `sudo` wymagają wcześniejsze polecenia instalujące zależności.
+Uruchom instalator jako zwykły użytkownik. Buduje overlay i instaluje ChatHUD w `~/.local`, razem z wpisem w menu aplikacji. Istniejące ustawienia zostają zachowane.
 
-**Wolisz ZIP?** Na stronie repozytorium kliknij **Code → Download ZIP**, rozpakuj archiwum i otwórz terminal w rozpakowanym folderze. Po zainstalowaniu zależności wykonaj `bash install.sh`. ZIP zawiera kod źródłowy, który również trzeba zbudować.
+Możesz też wybrać **Code → Download ZIP**, rozpakować archiwum i wykonać `bash install.sh` w rozpakowanym folderze. ZIP zawiera kod źródłowy, więc nadal potrzebujesz zależności do budowania.
 
-### 3. Otwórz aplikację
-
-W menu Linuksa wyszukaj **ChatHUD** albo wykonaj:
+Otwórz **ChatHUD** z menu aplikacji albo wykonaj:
 
 ```bash
 ~/.local/bin/chathud-gui
 ```
 
-## Pierwsze uruchomienie
+<details>
+<summary>Starszy Debian / Ubuntu: osobne środowisko Pythona dla PySide6</summary>
 
-1. W polu **Transmisja** wklej link do konkretnego live’a na YouTube.
-2. Wybierz ekran w polu **Monitor**. Przycisk **↻** odświeża listę po zmianie układu monitorów.
-3. Ustaw pozycję, szerokość, rozmiar tekstu, liczbę wiadomości i krycie tła. W zakładce **Zaawansowane** są wyrównanie, kolejność, emotki i opcjonalne YouTube API.
-4. **Test na pulpicie** pokazuje przykładowe wiadomości bez gry i internetu. **Połącz z live’em** pobiera prawdziwy czat. Przycisk **■** zatrzymuje podgląd.
+Zainstaluj podane wyżej biblioteki i narzędzia, pomijając `python3-pyside6.qtwidgets` i `python3-pyside6.qtsvg`. Dodaj `python3-venv`, a następnie użyj Pythona 3.10 lub nowszego:
+
+```bash
+sudo apt install python3-venv
+CHATHUD_VENV="${XDG_DATA_HOME:-$HOME/.local/share}/chathud/venv"
+python3 -m venv "$CHATHUD_VENV"
+"$CHATHUD_VENV/bin/python" -m pip install 'PySide6>=6.5,<7'
+```
+
+Launcher automatycznie korzysta z tego środowiska, również przy uruchamianiu z menu aplikacji. Jeśli go nie ma, używa systemowego Pythona.
+
+</details>
+
+## Ustawienie gry
+
+1. W prawym górnym rogu wybierz **Polski** albo **English**. Aplikacja zapamięta język.
+2. Wklej link do YouTube Live, np. `https://www.youtube.com/watch?v=VIDEO_ID`, lub kanału Twitch, np. `https://www.twitch.tv/nazwa_kanału`.
+3. Wybierz monitor, pozycję czatu i ustaw wygląd.
+4. **Test na pulpicie** pokazuje przykładowe wiadomości. **Połącz z live’em** otwiera podany czat. Kwadratowy przycisk zatrzymuje podgląd.
 5. Kliknij **Kopiuj komendę** i wklej wynik w **Steam → gra → Właściwości → Ogólne → Opcje uruchamiania**.
 
-**Przy kolejnym live zmień link i zapisz ten sam profil. Komenda w Steam zostaje taka sama.** Ustawienia są wczytywane przy uruchamianiu overlaya — po zapisaniu zmian uruchom podgląd lub grę ponownie.
-
-**Dodaj profil** pozwala wybrać lokalnie wykrytą grę Steam lub wpisać własną nazwę. Nowy profil przejmuje zapisane ustawienia bieżącego profilu, a następnie ma własną konfigurację. Aplikacja odczytuje nazwy gier; opcje uruchamiania w Steam wklejasz samodzielnie.
-
-## Opcje uruchamiania Steam
-
-Panel generuje komendę dla wybranego profilu i poprawnie cytuje ścieżki ze spacjami. Jeśli masz już własne opcje, połącz je ręcznie przed wklejeniem.
+Jeśli masz już własne opcje uruchamiania, połącz je ręcznie przed wklejeniem. Dla kolejnej gry użyj **Dodaj profil**. Link jest zapisany w profilu, więc przy zmianie transmisji wystarczy zapisać ten sam profil i uruchomić overlay ponownie. Komenda w Steam zostaje taka sama.
 
 Przykład dla profilu domyślnego:
 
@@ -144,38 +101,33 @@ Z zainstalowanym MangoHud:
 $HOME/.local/bin/chathud-steam --config "$HOME/.config/chathud/config" -- mangohud %command%
 ```
 
-Możesz też podać link bezpośrednio. `--url` ma pierwszeństwo przed `stream_url` zapisanym w profilu:
-
-```bash
-$HOME/.local/bin/chathud-steam --url "https://www.youtube.com/watch?v=VIDEO_ID" -- %command%
-```
-
 Overlay bez uruchamiania gry:
 
 ```bash
-~/.local/bin/chathud --url "https://www.youtube.com/watch?v=VIDEO_ID" --no-game
+~/.local/bin/chathud --url "https://www.twitch.tv/nazwa_kanału" --no-game
 ```
 
-## Ustawienia i pliki
+## YouTube i Twitch
 
-| Domyślna lokalizacja | Zawartość |
-| --- | --- |
-| `~/.local/bin/chathud` | Natywny overlay |
-| `~/.local/bin/chathud-steam` | Launcher Steam/Proton |
-| `~/.local/bin/chathud-gui` | Launcher panelu ustawień |
-| `~/.local/share/chathud/` | Panel, ikona i opcjonalne środowisko Pythona |
-| `~/.config/chathud/config` | Profil domyślny |
-| `~/.config/chathud/profiles/*.conf` | Profile gier |
-| `~/.config/chathud/profiles.json` | Nazwy profili i wybór MangoHud |
-| `~/.cache/chathud/steam-wrapper.log` | Log launchera Steam |
+**YouTube** domyślnie korzysta z `yt-dlp`. Opcjonalny backend YouTube Data API wymaga własnego klucza. Obsługiwane są obrazkowe emotki YouTube.
 
-Obsługiwane są `XDG_CONFIG_HOME`, `XDG_DATA_HOME` i `XDG_CACHE_HOME`. Instalator zachowuje istniejący profil domyślny. Panel zachowuje komentarze i nieznane ustawienia w konfiguracji; pliki profili i ich metadane są zapisywane atomowo z prywatnymi uprawnieniami.
+**Twitch** korzysta z anonimowego odczytu IRC przez TLS. Obsługuje wiadomości, ponowne łączenie, podtrzymywanie połączenia i usuwanie wiadomości przez moderację. Nie wysyła wiadomości na czat. Wklej link do kanału; linki do VOD i klipów nie są obsługiwane. Nazwy emotek Twitcha są na razie tekstem — obrazki emotek oraz BTTV/FFZ/7TV nie są zaimplementowane.
 
-Pełną listę ustawień zawiera [config.example](config.example). Typowy profil:
+Backend jest wybierany na podstawie linku. Pole **Źródło YouTube** dotyczy tylko YouTube. Twitch nie potrzebuje `yt-dlp` ani klucza YouTube. Anonimowy odczyt zależy od tego, czy Twitch nadal go udostępnia; odrzucenie połączenia jest pokazywane w overlayu.
+
+## Ustawienia
+
+- `~/.config/chathud/config` — profil domyślny.
+- `~/.config/chathud/profiles/*.conf` — profile gier.
+- `~/.config/chathud/profiles.json` — nazwy profili i wybór MangoHud.
+- `~/.config/chathud/ui.json` — język interfejsu.
+- `~/.cache/chathud/steam-wrapper.log` — log launchera Steam.
+
+Ścieżki uwzględniają `XDG_CONFIG_HOME`, `XDG_DATA_HOME` i `XDG_CACHE_HOME`. Wszystkie opcje są w [config.example](config.example). Przykład:
 
 ```ini
-stream_url=https://www.youtube.com/watch?v=VIDEO_ID
-provider=auto
+stream_url=https://www.twitch.tv/channel_name
+language=pl
 monitor=primary
 position=top-right
 width=700
@@ -184,62 +136,31 @@ font_size=18
 background_opacity=0.62
 ```
 
-`background_opacity=0` usuwa tło panelu. Monitor wybierzesz w GUI albo odczytasz jego nazwę przez `~/.local/bin/chathud --list-monitors`. Po odłączeniu zapisanego ekranu overlay użyje głównego monitora, a gdy żaden nie jest oznaczony jako główny — pierwszego aktywnego.
+`language` ustawia język komunikatów overlaya; panel zapisuje tę wartość razem z profilem. Treść czatu nie jest tłumaczona. `background_opacity=0` usuwa ciemne tło panelu. Zmiany są wczytywane przy kolejnym uruchomieniu overlaya.
 
-<details>
-<summary><strong>Opcjonalne oficjalne YouTube Data API</strong></summary>
+## W razie problemów
 
-Wybierz **Źródło czatu → YouTube API** i podaj własny klucz albo wpisz w profilu:
+- **Błąd budowania:** sprawdź zależności, w tym pakiety deweloperskie z nagłówkami.
+- **Brak PySide6:** zainstaluj pakiety Qt dystrybucji lub utwórz osobne środowisko opisane wyżej.
+- **Zły monitor:** wybierz ekran, zapisz profil i uruchom overlay ponownie. Po odłączeniu wybranego ekranu używany jest główny monitor.
+- **Brak overlaya na Wayland:** sprawdź XWayland i zmienną `DISPLAY`. Widoczność nad natywnymi grami Wayland zależy od kompozytora.
+- **Pusty czat YouTube:** sprawdź link, dostępność czatu na transmisji i wersję `yt-dlp`.
+- **Pusty czat Twitch:** sprawdź link do kanału i komunikat połączenia w overlayu.
+- **Problem w Steam:** zajrzyj do logu launchera. Przycisk **Diagnostyka** pokazuje ścieżki i brakujące zależności.
 
-```ini
-provider=api
-youtube_api_key=YOUR_API_KEY
-```
-
-`provider=auto` wybiera `yt-dlp`, jeśli jest dostępny. W przeciwnym razie próbuje oficjalnego API, które wymaga prawidłowego klucza.
-
-</details>
-
-## Rozwiązywanie problemów
-
-| Objaw | Co sprawdzić |
-| --- | --- |
-| Budowanie zgłasza brak biblioteki | Zainstaluj zależności z sekcji instalacji, w tym pakiety deweloperskie z nagłówkami. |
-| Panel zgłasza brak PySide6 | Zainstaluj pakiety Qt dystrybucji albo utwórz opisane wyżej środowisko Pythona. |
-| Czat jest na złym ekranie | Wybierz **Monitor**, zapisz profil i uruchom overlay ponownie. |
-| Overlay jest niewidoczny na Wayland | Sprawdź XWayland i zmienną `DISPLAY`. Widoczność nad natywnymi grami Wayland zależy od kompozytora. |
-| Brak wiadomości | Sprawdź link, dostępność czatu na transmisji i wersję `yt-dlp`. Zajrzyj do **Diagnostyka**. |
-| Problem z uruchomieniem przez Steam | Sprawdź `~/.cache/chathud/steam-wrapper.log`. |
-| Na pasku została stara przypięta ikona | Zamknij aplikację, uruchom **ChatHUD** z menu i przypnij aktualny launcher. |
-
-Zgłaszając problem, podaj dystrybucję, sesję X11/Wayland, wersję ChatHUD, istotny komunikat z terminala i log launchera Steam. Usuń z logów klucze API oraz inne prywatne dane przed ich udostępnieniem.
+Zgłaszając błąd, podaj dystrybucję, sesję X11/Wayland, wersję programu i istotny fragment logu. Usuń klucze API przed udostępnieniem logów.
 
 ## Aktualizacja i odinstalowanie
 
 W kopii pobranej przez Git, bez własnych zmian w kodzie:
 
 ```bash
-cd ChatHud
 git pull --ff-only
 ./install.sh
 ```
 
-Przed aktualizacją zamknij panel i overlay, a po niej otwórz je ponownie. Profile zostaną zachowane. Przy instalacji z ZIP pobierz i rozpakuj nowy kod, a następnie uruchom jego instalator.
+Po aktualizacji otwórz panel i overlay ponownie. Przy instalacji z ZIP pobierz nowy kod i uruchom jego instalator.
 
-Odinstalowanie z katalogu źródeł:
+Aby odinstalować program, wykonaj `make uninstall` w katalogu źródeł. Usuwa pliki aplikacji i opcjonalne środowisko Pythona. Profile i pamięć podręczna pozostają.
 
-```bash
-make uninstall
-```
-
-Usuwa pliki aplikacji oraz opcjonalne środowisko Pythona w jej katalogu danych. Ustawienia i pamięć podręczna pozostają w lokalizacjach z tabeli.
-
-## Obecny zakres i plany
-
-ChatHUD obsługuje **YouTube Live w Linuksie przez X11/XWayland**. Jest zewnętrznym overlayem, a jego widoczność w konkretnej grze zależy od systemu okien i kompozytora. Pobieranie czatu zależy również od zmian w YouTube i aktualności `yt-dlp`.
-
-W planach są natywna obsługa Wayland, Twitch i jego emotki, skrót pokazywania/ukrywania czatu, wygaszanie wiadomości, bogatsze odznaki i łatwiejsza instalacja przez paczki lub Flatpak. To planowane kierunki rozwoju.
-
-Kod renderera jest w C, a panel ustawień korzysta z Pythona i PySide6. Repozytorium zawiera sprawdzenia regresji uruchamiane przez `make test`; opis wersji znajdziesz w [CHANGELOG.md](CHANGELOG.md).
-
-Projekt udostępniono na [licencji MIT](LICENSE).
+[Licencja MIT](LICENSE)

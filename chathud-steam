@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-# ChatHUD Steam launcher v0.6.1
+# ChatHUD Steam launcher v0.7.0
 #
 # Ten skrypt jest celowo oddzielony od natywnego chathud.
 # Steam/Proton ustawia własne zmienne środowiskowe bibliotek. Natywny overlay
@@ -16,7 +16,7 @@ demo=0
 
 usage() {
     cat >&2 <<'TXT'
-ChatHUD Steam launcher 0.6.1
+ChatHUD Steam launcher 0.7.0
 
 Użycie:
   chathud-steam --url URL -- %command%

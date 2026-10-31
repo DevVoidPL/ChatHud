@@ -1,7 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=ChatHUD
-Comment=Ustawienia czatu YouTube nad grą i profili Steam
+Comment=YouTube and Twitch chat overlay for Linux games
+Comment[pl]=Czat YouTube i Twitch nad grą w Linuksie
 Exec=chathud-gui
 Icon=io.github.DevVoidPL.ChatHUD
 Terminal=false
