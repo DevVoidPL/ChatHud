@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <poll.h>
 #include <signal.h>
 #include <spawn.h>
 #include <stdio.h>
@@ -39,7 +40,23 @@ int ytdlp_available(void) {
     return found;
 }
 
-static int capture_channel_name(const char *url, char *out, size_t out_size) {
+/* Do not leave a downloader behind or block shutdown on a stalled network. */
+static void stop_child(pid_t pid) {
+    if (pid <= 0) return;
+    pid_t result;
+    do { result = waitpid(pid, NULL, WNOHANG); } while (result < 0 && errno == EINTR);
+    if (result != 0) return;
+    kill(pid, SIGTERM);
+    for (int i = 0; i < 20; i++) {
+        pid_t result = waitpid(pid, NULL, WNOHANG);
+        if (result == pid || (result < 0 && errno != EINTR)) return;
+        usleep(50000);
+    }
+    kill(pid, SIGKILL);
+    while (waitpid(pid, NULL, 0) < 0 && errno == EINTR) {}
+}
+
+static int capture_channel_name(ChatState *state, const char *url, char *out, size_t out_size) {
     int pipefd[2];
     if (pipe(pipefd) != 0) return 0;
 
@@ -64,15 +81,33 @@ static int capture_channel_name(const char *url, char *out, size_t out_size) {
     if (rc != 0) { close(pipefd[0]); return 0; }
 
     char buf[512];
-    ssize_t n = read(pipefd[0], buf, sizeof(buf) - 1);
+    size_t used = 0;
+    struct pollfd ready = {.fd = pipefd[0], .events = POLLIN};
+    for (int ticks = 0; ticks < 150 && !chat_state_should_stop(state); ticks++) {
+        int result = poll(&ready, 1, 100);
+        if (result < 0) {
+            if (errno == EINTR) continue;
+            break;
+        }
+        if (result == 0) continue;
+        ssize_t n = read(pipefd[0], buf + used, sizeof(buf) - used - 1);
+        if (n <= 0) break;
+        used += (size_t)n;
+        buf[used] = '\0';
+        if (strpbrk(buf, "\r\n") || used == sizeof(buf) - 1) break;
+    }
     close(pipefd[0]);
-    waitpid(pid, NULL, 0);
-    if (n <= 0) return 0;
-    buf[n] = '\0';
+    stop_child(pid);
+    if (used == 0) return 0;
+    buf[used] = '\0';
     char *eol = strpbrk(buf, "\r\n");
     if (eol) *eol = '\0';
     if (!buf[0] || strcmp(buf, "NA") == 0) return 0;
-    snprintf(out, out_size, "%s", buf);
+    if (out_size == 0) return 0;
+    size_t length = strlen(buf);
+    if (length >= out_size) length = out_size - 1;
+    memcpy(out, buf, length);
+    out[length] = '\0';
     return 1;
 }
 
@@ -297,8 +332,9 @@ void *ytdlp_thread(void *arg) {
 
     chat_state_set_status(state, "Łączę z YouTube…", 0);
     char channel[CHATHUD_TITLE_MAX];
-    if (capture_channel_name(args->url, channel, sizeof(channel)))
+    if (capture_channel_name(state, args->url, channel, sizeof(channel)))
         chat_state_set_title(state, channel);
+    if (chat_state_should_stop(state)) return NULL;
 
     char tmp_template[] = "/tmp/chathud-yt-XXXXXX";
     char *dir = mkdtemp(tmp_template);
@@ -322,13 +358,13 @@ void *ytdlp_thread(void *arg) {
         usleep(100000);
     }
     if (chat_state_should_stop(state)) {
-        kill(child, SIGTERM); waitpid(child, NULL, 0); cleanup_dir(dir); return NULL;
+        stop_child(child); cleanup_dir(dir); return NULL;
     }
 
     int fd = open(chat_file, O_RDONLY);
     if (fd < 0) {
         chat_state_set_status(state, "Nie mogę otworzyć live_chat z yt-dlp", 1);
-        kill(child, SIGTERM); waitpid(child, NULL, 0); cleanup_dir(dir); return NULL;
+        stop_child(child); cleanup_dir(dir); return NULL;
     }
 
     chat_state_set_status(state, "", 0);
@@ -346,8 +382,7 @@ void *ytdlp_thread(void *arg) {
     }
 
     free(pending); close(fd);
-    pid_t rc = waitpid(child, NULL, WNOHANG);
-    if (rc == 0) { kill(child, SIGTERM); waitpid(child, NULL, 0); }
+    stop_child(child);
     cleanup_dir(dir);
     return NULL;
 }

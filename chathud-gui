@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export PATH="$HOME/.local/bin:${PATH:-/usr/bin:/bin}"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+if [[ -f "$script_dir/gui/app.py" ]]; then
+    app="$script_dir/gui/app.py"
+else
+    app="${XDG_DATA_HOME:-$HOME/.local/share}/chathud/gui/app.py"
+fi
+venv_python="${XDG_DATA_HOME:-$HOME/.local/share}/chathud/venv/bin/python"
+if [[ -n "${CHATHUD_PYTHON:-}" ]]; then
+    python_bin="$CHATHUD_PYTHON"
+elif [[ -x "$venv_python" ]]; then
+    python_bin="$venv_python"
+else
+    python_bin=python3
+fi
+exec "$python_bin" "$app" "$@"

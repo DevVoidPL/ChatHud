@@ -1,6 +1,7 @@
 #include "chat.h"
 #include "config.h"
 #include "overlay.h"
+#include "monitor.h"
 #include "youtube.h"
 #include "ytdlp.h"
 
@@ -64,17 +65,18 @@ static void normalize_url_arg(const char *input, char *out, size_t out_size) {
 
 static void usage(const char *argv0) {
     fprintf(stderr,
-        "ChatHUD 0.5.1\n\n"
+        "ChatHUD 0.6.1\n\n"
         "Użycie:\n"
         "  %s --url URL -- %%command%%\n"
         "  %s --url URL --no-game\n"
         "  %s --demo --no-game\n\n"
         "Opcje:\n"
-        "  --url URL       Link do YouTube Live\n"
+        "  --url URL       Link do YouTube Live (nadpisuje stream_url w configu)\n"
         "  --api-key KEY   Nadpisz youtube_api_key z configu\n"
         "  --config PATH   Własny plik configu\n"
         "  --no-game       Pokaż overlay bez uruchamiania gry\n"
         "  --demo          Wstaw przykładowe wiadomości\n"
+        "  --list-monitors Lista monitorów X11/XWayland w JSON\n"
         "  --help          Pokaż pomoc\n",
         argv0, argv0, argv0);
 }
@@ -250,6 +252,8 @@ int main(int argc, char **argv) {
                 return 2;
             }
             watch_pid = (pid_t)parsed;
+        } else if (strcmp(argv[i], "--list-monitors") == 0) {
+            return monitor_print_json();
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             usage(argv[0]);
             return 0;
@@ -266,13 +270,14 @@ int main(int argc, char **argv) {
     }
 
     char normalized_url[2048];
+    if (!url && cfg.stream_url[0]) url = cfg.stream_url;
     if (url) {
         normalize_url_arg(url, normalized_url, sizeof(normalized_url));
         url = normalized_url;
     }
 
-    if (!demo && !url) {
-        fprintf(stderr, "Brak --url. Do testu użyj --demo --no-game.\n");
+    if (!demo && (!url || !url[0])) {
+        fprintf(stderr, "Brak linku: ustaw stream_url w configu lub podaj --url. Do testu użyj --demo --no-game.\n");
         return 2;
     }
 

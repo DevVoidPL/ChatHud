@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 typedef struct {
+    char stream_url[2048];
     char youtube_api_key[256];
     char provider[32];
     int lines;
@@ -17,6 +18,7 @@ typedef struct {
     int emotes;
     int emote_size;
     char position[32];
+    char monitor[256];
     char text_align[16];
     char message_order[24];
 } AppConfig;

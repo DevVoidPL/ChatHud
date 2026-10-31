@@ -40,6 +40,7 @@ void config_defaults(AppConfig *cfg) {
     cfg->emotes = 1;
     cfg->emote_size = 24;
     snprintf(cfg->position, sizeof(cfg->position), "top-right");
+    snprintf(cfg->monitor, sizeof(cfg->monitor), "primary");
     snprintf(cfg->text_align, sizeof(cfg->text_align), "left");
     snprintf(cfg->message_order, sizeof(cfg->message_order), "oldest-first");
 }
@@ -60,7 +61,7 @@ void config_load(AppConfig *cfg, const char *path) {
     FILE *f = fopen(path, "r");
     if (!f) return;
 
-    char line[1024];
+    char line[3072];
     while (fgets(line, sizeof(line), f)) {
         char *p = trim(line);
         if (*p == '\0' || *p == '#') continue;
@@ -72,7 +73,9 @@ void config_load(AppConfig *cfg, const char *path) {
         char *key = trim(p);
         char *value = trim(eq + 1);
 
-        if (strcmp(key, "provider") == 0) {
+        if (strcmp(key, "stream_url") == 0) {
+            snprintf(cfg->stream_url, sizeof(cfg->stream_url), "%s", value);
+        } else if (strcmp(key, "provider") == 0) {
             snprintf(cfg->provider, sizeof(cfg->provider), "%s", value);
         } else if (strcmp(key, "youtube_api_key") == 0) {
             snprintf(cfg->youtube_api_key, sizeof(cfg->youtube_api_key), "%s", value);
@@ -96,6 +99,8 @@ void config_load(AppConfig *cfg, const char *path) {
             cfg->emotes = parse_bool(value, cfg->emotes);
         } else if (strcmp(key, "emote_size") == 0) {
             cfg->emote_size = atoi(value);
+        } else if (strcmp(key, "monitor") == 0) {
+            snprintf(cfg->monitor, sizeof(cfg->monitor), "%s", value);
         } else if (strcmp(key, "position") == 0) {
             snprintf(cfg->position, sizeof(cfg->position), "%s", value);
         } else if (strcmp(key, "text_align") == 0) {

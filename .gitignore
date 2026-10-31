@@ -4,7 +4,7 @@ src/*.o
 
 # Debug / crash artifacts
 core
-core.*
+core.[0-9]*
 *.core
 *.log
 
@@ -18,3 +18,8 @@ core.*
 # Local configuration / secrets
 config
 .env
+
+# Dependency files and Python caches
+src/*.d
+__pycache__/
+*.pyc

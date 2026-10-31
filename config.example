@@ -1,4 +1,6 @@
-# ChatHUD v0.5.1
+# ChatHUD v0.6.1
+# Link zapisany przez GUI. --url w komendzie ma pierwszeństwo.
+stream_url=
 # auto = yt-dlp, jeśli dostępny; inaczej oficjalne YouTube API
 provider=auto
 youtube_api_key=
@@ -23,7 +25,10 @@ background_opacity=0.62
 # Odstęp od krawędzi ekranu.
 margin=24
 
-# 9 pozycji:
+# Główny monitor lub nazwa z listy w GUI / chathud --list-monitors.
+monitor=primary
+
+# 9 pozycji względem wybranego monitora:
 # top-left, top-center, top-right
 # center-left, center, center-right
 # bottom-left, bottom-center, bottom-right

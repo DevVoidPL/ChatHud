@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=ChatHUD
+Comment=Ustawienia czatu YouTube nad grą i profili Steam
+Exec=chathud-gui
+Icon=io.github.DevVoidPL.ChatHUD
+Terminal=false
+Categories=Game;
+StartupNotify=true
+StartupWMClass=ChatHUD

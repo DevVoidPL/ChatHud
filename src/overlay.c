@@ -1,11 +1,13 @@
 #include "overlay.h"
 #include "image.h"
+#include "monitor.h"
 
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/extensions/shape.h>
 #include <X11/extensions/Xfixes.h>
+#include <X11/extensions/Xrandr.h>
 #include <cairo/cairo.h>
 #include <cairo/cairo-xlib.h>
 #include <pango/pangocairo.h>
@@ -374,8 +376,17 @@ int overlay_run(const OverlayArgs *args) {
 
     int screen = DefaultScreen(dpy);
     Window root = RootWindow(dpy, screen);
-    int screen_w = DisplayWidth(dpy, screen);
-    int screen_h = DisplayHeight(dpy, screen);
+    ChatMonitor monitor = monitor_select(dpy, root, args->config->monitor);
+    int screen_w = monitor.width;
+    int screen_h = monitor.height;
+    int randr_event = 0, randr_error = 0;
+    int has_randr = XRRQueryExtension(dpy, &randr_event, &randr_error);
+    if (has_randr) {
+        XRRSelectInput(dpy, root, RRScreenChangeNotifyMask | RRCrtcChangeNotifyMask |
+                      RROutputChangeNotifyMask | RRResourceChangeNotifyMask);
+    }
+    fprintf(stderr, "ChatHUD: monitor=%s %dx%d%+d%+d (wybrano: %s)\n",
+            monitor.name, screen_w, screen_h, monitor.x, monitor.y, args->config->monitor);
 
     XVisualInfo vinfo;
     if (!XMatchVisualInfo(dpy, screen, 32, TrueColor, &vinfo)) {
@@ -393,10 +404,9 @@ int overlay_run(const OverlayArgs *args) {
     attrs.override_redirect = True;
     attrs.event_mask = ExposureMask | StructureNotifyMask;
 
-    /* Pełnoekranowe, całkowicie przezroczyste i click-through okno.
-       Sam panel jest rysowany tylko w wybranym rogu/środku. Dzięki temu
-       może zmieniać wysokość gdy wiadomości się zawijają bez XMoveResize. */
-    Window win = XCreateWindow(dpy, root, 0, 0, (unsigned)screen_w, (unsigned)screen_h,
+    /* Okno obejmuje wyłącznie wybrany monitor. Współrzędne panelu są lokalne,
+       więc środek i narożniki nie uwzględniają sąsiednich ekranów. */
+    Window win = XCreateWindow(dpy, root, monitor.x, monitor.y, (unsigned)screen_w, (unsigned)screen_h,
                                0, vinfo.depth, InputOutput, vinfo.visual,
                                CWColormap | CWBorderPixel | CWBackPixel |
                                CWOverrideRedirect | CWEventMask, &attrs);
@@ -437,7 +447,28 @@ int overlay_run(const OverlayArgs *args) {
     }
 
     while (!chat_state_should_stop(args->state)) {
-        while (XPending(dpy)) { XEvent ev; XNextEvent(dpy, &ev); }
+        int topology_changed = 0;
+        while (XPending(dpy)) {
+            XEvent ev;
+            XNextEvent(dpy, &ev);
+            if (has_randr && (ev.type == randr_event + RRScreenChangeNotify ||
+                              ev.type == randr_event + RRNotify)) {
+                XRRUpdateConfiguration(&ev);
+                topology_changed = 1;
+            }
+        }
+        if (topology_changed) {
+            ChatMonitor updated = monitor_select(dpy, root, args->config->monitor);
+            if (updated.x != monitor.x || updated.y != monitor.y ||
+                updated.width != monitor.width || updated.height != monitor.height) {
+                monitor = updated;
+                screen_w = monitor.width;
+                screen_h = monitor.height;
+                XMoveResizeWindow(dpy, win, monitor.x, monitor.y,
+                                  (unsigned)screen_w, (unsigned)screen_h);
+                cairo_xlib_surface_set_size(surface, screen_w, screen_h);
+            }
+        }
         render_overlay(cr, layout, font, args->config, args->state,
                        screen_w, screen_h, image_cache, work);
         XFlush(dpy);

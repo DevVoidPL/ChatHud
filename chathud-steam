@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-# ChatHUD Steam launcher v0.5.1
+# ChatHUD Steam launcher v0.6.1
 #
 # Ten skrypt jest celowo oddzielony od natywnego chathud.
 # Steam/Proton ustawia własne zmienne środowiskowe bibliotek. Natywny overlay
@@ -7,6 +7,7 @@
 # DOKŁADNIE z oryginalnym środowiskiem Steam.
 
 set -u
+shopt -s execfail
 
 url=""
 api_key=""
@@ -15,11 +16,12 @@ demo=0
 
 usage() {
     cat >&2 <<'TXT'
-ChatHUD Steam launcher 0.5.1
+ChatHUD Steam launcher 0.6.1
 
 Użycie:
   chathud-steam --url URL -- %command%
   chathud-steam --demo -- %command%
+  chathud-steam --config PATH -- %command%
 TXT
 }
 
@@ -109,7 +111,7 @@ worker=("$chathud_bin" --worker --watch-pid "$$")
 # chathud jest programem zbudowanym przeciwko bibliotekom hosta (Arch).
 # Nie przekazujemy mu ścieżek/preloadów Steam Runtime. To dotyczy WYŁĄCZNIE
 # procesu overlaya. Komenda gry poniżej zachowuje oryginalne środowisko Steam.
-env -u LD_LIBRARY_PATH -u LD_PRELOAD "${worker[@]}" >>"$log_file" 2>&1 &
+env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH="$HOME/.local/bin:${PATH:-/usr/bin:/bin}" "${worker[@]}" >>"$log_file" 2>&1 &
 worker_pid=$!
 echo "overlay_worker_pid=$worker_pid" >>"$log_file"
 

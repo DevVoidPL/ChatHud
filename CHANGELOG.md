@@ -2,6 +2,38 @@
 
 All notable changes to ChatHUD will be documented here.
 
+## [0.6.1] - 2026-10-31
+
+### Added
+- Branded GitHub banner and social-preview image, with complete English and Polish installation guides.
+- Automatic desktop-launcher support for an app-local PySide6 virtual environment on distributions without native PySide6 packages.
+
+### Fixed
+- Overlay positions and panel bounds now use the selected monitor instead of the combined desktop.
+- Monitor selection in the GUI uses the renderer's XRandR names and persists per profile.
+- Default to the primary monitor; fall back to it when a selected display is disconnected.
+- React to monitor layout changes without moving the chat onto a neighboring display.
+- Taskbar identity on Wayland/X11 now matches a canonical desktop entry, with an explicit PNG icon and application-wide window icon.
+- Existing pinned launchers retain a compatible hidden desktop entry.
+
+## [0.6.0] - 2026-10-31
+
+### Added
+- Native PySide6 desktop settings app, Polish UI, app icon and menu entry.
+- Custom pixel-art ChatHUD icon for Linux, app header and GitHub README branding.
+- Independent per-game profiles and local Steam game-name discovery.
+- In-app appearance preview plus real desktop demo/live test with stop controls.
+- Copy Steam Launch Options, including optional MangoHud.
+- Persistent `stream_url` config key; explicit `--url` takes precedence.
+- Dependency/session diagnostics, atomic private profile writes, regression checks.
+
+### Fixed
+- Bounded and interruptible yt-dlp channel lookup and downloader shutdown.
+- Steam wrapper cleans up its overlay when executing the game fails.
+- Installer no longer prints a hard-coded developer home directory.
+- Installation respects XDG config/data directories and preserves existing config.
+- Header dependency tracking avoids stale C objects after config changes.
+
 ## [0.5.1] - 2026-08-19
 
 ### Fixed
