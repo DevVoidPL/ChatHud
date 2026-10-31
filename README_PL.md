@@ -1,12 +1,12 @@
 ![ChatHUD](assets/chathud-banner.png)
 
-[English](README.md) · [Historia zmian](CHANGELOG.md)
+[English](README.md) | [Historia zmian](CHANGELOG.md)
 
 # ChatHUD
 
 ChatHUD wyświetla czat YouTube Live i Twitcha nad grami w Linuksie. Overlay jest napisany w C, a osobna aplikacja Qt służy do ustawiania wyglądu, profili i komend Steam. Podczas gry panel ustawień może być zamknięty.
 
-**Wersja 0.7.0 — wczesna alpha.** Overlay korzysta z X11/XWayland. Nie ma jeszcze paczki Flatpak ani AppImage; instalacja polega na zbudowaniu programu z kodu źródłowego.
+Wersja 0.7.0 (wersja alfa). Overlay korzysta z X11/XWayland. Program trzeba zbudować z kodu źródłowego według instrukcji poniżej. Paczki Flatpak i AppImage nie są jeszcze dostępne.
 
 - Linki do YouTube Live i kanałów Twitch, rozpoznawane automatycznie.
 - Osobny link, monitor i wygląd czatu dla każdej gry.
@@ -16,7 +16,7 @@ ChatHUD wyświetla czat YouTube Live i Twitcha nad grami w Linuksie. Overlay jes
 
 ![ChatHUD podczas gry](assets/chathud-ingame.png)
 
-*Zrzut z gry z wcześniejszej wersji programu.*
+Zrzut z wcześniejszej wersji programu.
 
 ## Instalacja
 
@@ -43,7 +43,7 @@ sudo apt install \
   libjson-c-dev libjpeg-dev libwebp-dev yt-dlp
 ```
 
-Pakiety PySide6 w Ubuntu są w repozytorium Universe. Na starszych wydaniach, które ich nie mają, skorzystaj z opisanego niżej środowiska Pythona. `yt-dlp` jest potrzebny do domyślnego backendu YouTube; Twitch korzysta bezpośrednio z libcurl.
+Pakiety PySide6 w Ubuntu są w repozytorium Universe. Na starszych wydaniach, które ich nie mają, skorzystaj z opisanego niżej środowiska Pythona. YouTube domyślnie korzysta z `yt-dlp`. Twitch łączy się przez libcurl.
 
 ### Pobranie i budowanie
 
@@ -55,9 +55,9 @@ cd ChatHud
 
 Uruchom instalator jako zwykły użytkownik. Buduje overlay i instaluje ChatHUD w `~/.local`, razem z wpisem w menu aplikacji. Istniejące ustawienia zostają zachowane.
 
-Możesz też wybrać **Code → Download ZIP**, rozpakować archiwum i wykonać `bash install.sh` w rozpakowanym folderze. ZIP zawiera kod źródłowy, więc nadal potrzebujesz zależności do budowania.
+Możesz też wybrać Code > Download ZIP, rozpakować archiwum i wykonać `bash install.sh` w rozpakowanym folderze. ZIP zawiera kod źródłowy, więc nadal potrzebujesz zależności do budowania.
 
-Otwórz **ChatHUD** z menu aplikacji albo wykonaj:
+Otwórz ChatHUD z menu aplikacji albo wykonaj:
 
 ```bash
 ~/.local/bin/chathud-gui
@@ -81,13 +81,13 @@ Launcher automatycznie korzysta z tego środowiska, również przy uruchamianiu 
 
 ## Ustawienie gry
 
-1. W prawym górnym rogu wybierz **Polski** albo **English**. Aplikacja zapamięta język.
+1. W prawym górnym rogu wybierz Polski albo English. Aplikacja zapamięta język.
 2. Wklej link do YouTube Live, np. `https://www.youtube.com/watch?v=VIDEO_ID`, lub kanału Twitch, np. `https://www.twitch.tv/nazwa_kanału`.
 3. Wybierz monitor, pozycję czatu i ustaw wygląd.
-4. **Test na pulpicie** pokazuje przykładowe wiadomości. **Połącz z live’em** otwiera podany czat. Kwadratowy przycisk zatrzymuje podgląd.
-5. Kliknij **Kopiuj komendę** i wklej wynik w **Steam → gra → Właściwości → Ogólne → Opcje uruchamiania**.
+4. Test na pulpicie pokazuje przykładowe wiadomości. Połącz z live'em otwiera podany czat. Kwadratowy przycisk zatrzymuje podgląd.
+5. Kliknij Kopiuj komendę i wklej wynik w Steam > gra > Właściwości > Ogólne > Opcje uruchamiania.
 
-Jeśli masz już własne opcje uruchamiania, połącz je ręcznie przed wklejeniem. Dla kolejnej gry użyj **Dodaj profil**. Link jest zapisany w profilu, więc przy zmianie transmisji wystarczy zapisać ten sam profil i uruchomić overlay ponownie. Komenda w Steam zostaje taka sama.
+Jeśli masz już własne opcje uruchamiania, połącz je ręcznie przed wklejeniem. Dla kolejnej gry użyj Dodaj profil. Link jest zapisany w profilu, więc przy zmianie transmisji wystarczy zapisać ten sam profil i uruchomić overlay ponownie. Komenda w Steam zostaje taka sama.
 
 Przykład dla profilu domyślnego:
 
@@ -109,19 +109,19 @@ Overlay bez uruchamiania gry:
 
 ## YouTube i Twitch
 
-**YouTube** domyślnie korzysta z `yt-dlp`. Opcjonalny backend YouTube Data API wymaga własnego klucza. Obsługiwane są obrazkowe emotki YouTube.
+YouTube domyślnie korzysta z `yt-dlp`. Opcjonalny backend YouTube Data API wymaga własnego klucza. Obsługiwane są obrazkowe emotki YouTube.
 
-**Twitch** korzysta z anonimowego odczytu IRC przez TLS. Obsługuje wiadomości, ponowne łączenie, podtrzymywanie połączenia i usuwanie wiadomości przez moderację. Nie wysyła wiadomości na czat. Wklej link do kanału; linki do VOD i klipów nie są obsługiwane. Nazwy emotek Twitcha są na razie tekstem — obrazki emotek oraz BTTV/FFZ/7TV nie są zaimplementowane.
+Twitch korzysta z anonimowego odczytu IRC przez TLS. Obsługuje wiadomości, ponowne łączenie, podtrzymywanie połączenia i usuwanie wiadomości przez moderację. Nie wysyła wiadomości na czat. Wklej link do kanału. Linki do VOD i klipów nie są obsługiwane. Emotki Twitcha są na razie wyświetlane jako tekst. Obrazki emotek oraz BTTV/FFZ/7TV nie są jeszcze obsługiwane.
 
-Backend jest wybierany na podstawie linku. Pole **Źródło YouTube** dotyczy tylko YouTube. Twitch nie potrzebuje `yt-dlp` ani klucza YouTube. Anonimowy odczyt zależy od tego, czy Twitch nadal go udostępnia; odrzucenie połączenia jest pokazywane w overlayu.
+Backend jest wybierany na podstawie linku. Pole Źródło YouTube dotyczy tylko YouTube. Twitch nie potrzebuje `yt-dlp` ani klucza YouTube. Jeśli Twitch odrzuci anonimowe połączenie, overlay pokaże komunikat o błędzie.
 
 ## Ustawienia
 
-- `~/.config/chathud/config` — profil domyślny.
-- `~/.config/chathud/profiles/*.conf` — profile gier.
-- `~/.config/chathud/profiles.json` — nazwy profili i wybór MangoHud.
-- `~/.config/chathud/ui.json` — język interfejsu.
-- `~/.cache/chathud/steam-wrapper.log` — log launchera Steam.
+- `~/.config/chathud/config`: profil domyślny.
+- `~/.config/chathud/profiles/*.conf`: profile gier.
+- `~/.config/chathud/profiles.json`: nazwy profili i wybór MangoHud.
+- `~/.config/chathud/ui.json`: język interfejsu.
+- `~/.cache/chathud/steam-wrapper.log`: log launchera Steam.
 
 Ścieżki uwzględniają `XDG_CONFIG_HOME`, `XDG_DATA_HOME` i `XDG_CACHE_HOME`. Wszystkie opcje są w [config.example](config.example). Przykład:
 
@@ -136,17 +136,17 @@ font_size=18
 background_opacity=0.62
 ```
 
-`language` ustawia język komunikatów overlaya; panel zapisuje tę wartość razem z profilem. Treść czatu nie jest tłumaczona. `background_opacity=0` usuwa ciemne tło panelu. Zmiany są wczytywane przy kolejnym uruchomieniu overlaya.
+`language` ustawia język komunikatów overlaya. Panel zapisuje tę wartość razem z profilem. Treść czatu nie jest tłumaczona. `background_opacity=0` usuwa ciemne tło panelu. Zmiany są wczytywane przy kolejnym uruchomieniu overlaya.
 
 ## W razie problemów
 
-- **Błąd budowania:** sprawdź zależności, w tym pakiety deweloperskie z nagłówkami.
-- **Brak PySide6:** zainstaluj pakiety Qt dystrybucji lub utwórz osobne środowisko opisane wyżej.
-- **Zły monitor:** wybierz ekran, zapisz profil i uruchom overlay ponownie. Po odłączeniu wybranego ekranu używany jest główny monitor.
-- **Brak overlaya na Wayland:** sprawdź XWayland i zmienną `DISPLAY`. Widoczność nad natywnymi grami Wayland zależy od kompozytora.
-- **Pusty czat YouTube:** sprawdź link, dostępność czatu na transmisji i wersję `yt-dlp`.
-- **Pusty czat Twitch:** sprawdź link do kanału i komunikat połączenia w overlayu.
-- **Problem w Steam:** zajrzyj do logu launchera. Przycisk **Diagnostyka** pokazuje ścieżki i brakujące zależności.
+- Błąd budowania: sprawdź zależności, w tym pakiety deweloperskie z nagłówkami.
+- Brak PySide6: zainstaluj pakiety Qt dystrybucji lub utwórz osobne środowisko opisane wyżej.
+- Zły monitor: wybierz ekran, zapisz profil i uruchom overlay ponownie. Po odłączeniu wybranego ekranu używany jest główny monitor.
+- Brak overlaya na Wayland: sprawdź XWayland i zmienną `DISPLAY`. Widoczność nad natywnymi grami Wayland zależy od kompozytora.
+- Pusty czat YouTube: sprawdź link, dostępność czatu na transmisji i wersję `yt-dlp`.
+- Pusty czat Twitch: sprawdź link do kanału i komunikat połączenia w overlayu.
+- Problem w Steam: zajrzyj do logu launchera. Przycisk Diagnostyka pokazuje ścieżki i brakujące zależności.
 
 Zgłaszając błąd, podaj dystrybucję, sesję X11/Wayland, wersję programu i istotny fragment logu. Usuń klucze API przed udostępnieniem logów.
 
